@@ -6,8 +6,6 @@ export default function GalleryPage(){
   const { images, loading } = usePublicImages();
   const [selectedImage, setSelectedImage] = useState(null);
 
-  const staticImgs = ['/IMG1.webp','/IMG2.webp','/IMG3.webp','/IMG4.webp'];
-
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-white font-inter">
       {/* Modal de imagen completa */}
@@ -59,7 +57,9 @@ export default function GalleryPage(){
         
         {/* Grid de imágenes - 2 columnas pegadas */}
         <div className="flex flex-wrap justify-center" style={{ width: '768px' }}>
-          {(images && images.length > 0) ? (
+          {loading ? (
+            <div className="text-gray-400 py-8">Cargando imágenes...</div>
+          ) : images && images.length > 0 ? (
             images.filter(p => !p.path.includes('baner barberia')).map((p, i) => (
               <div key={`pub-${p.path}-${i}`} className="p-[2px] overflow-hidden" style={{ width: '384px' }}>
                 <img 
@@ -72,17 +72,7 @@ export default function GalleryPage(){
               </div>
             ))
           ) : (
-            staticImgs.map((src, i) => (
-              <div key={i} className="p-[2px] overflow-hidden" style={{ width: '384px' }}>
-                <img 
-                  src={src} 
-                  alt={`Foto ${i+1}`} 
-                  className="object-cover cursor-pointer hover:scale-105 transition-transform duration-300 w-full"
-                  style={{ height: '259.656px' }}
-                  onClick={() => setSelectedImage(src)}
-                />
-              </div>
-            ))
+            <div className="text-gray-400 py-8">No hay imágenes disponibles. Sube algunas desde el panel de administrador.</div>
           )}
         </div>
       </div>

@@ -168,18 +168,19 @@ function MStudioClient() {
         <section id="gallery" className="mb-12">
           <h3 className="text-2xl font-semibold mb-4"><Link to="/gallery" className="hover:underline">Galería</Link></h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {images && images.length > 0 ? (
+            {loading ? (
+              <div className="col-span-2 md:col-span-4 text-center text-gray-400 py-4">Cargando galería...</div>
+            ) : images && images.length > 0 ? (
               images.slice(0,4).map((p, i) => (
                 <Link key={`pub-${p.path}-${i}`} to="/gallery" className="h-40 bg-gray-800 rounded-lg overflow-hidden block">
                   <img src={p.url} alt={p.path} className="w-full h-full object-cover" />
                 </Link>
               ))
             ) : (
-              ["/IMG1.webp","/IMG2.webp","/IMG3.webp","/IMG4.webp"].map((src,i) => (
-                <Link key={i} to="/gallery" className="h-40 bg-gray-800 rounded-lg overflow-hidden block">
-                  <img src={src} alt={`Foto ${i+1}`} className="w-full h-full object-cover" />
-                </Link>
-              ))
+              <div className="col-span-2 md:col-span-4 text-center text-gray-400 py-4">
+                <p>No hay imágenes en la galería aún.</p>
+                <p className="text-sm mt-2">El administrador puede subir imágenes desde el panel.</p>
+              </div>
             )}
           </div>
         </section>
