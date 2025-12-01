@@ -15,7 +15,7 @@ export function usePublicImages() {
           if (active) setImages([]);
         } else {
           const data = await res.json();
-          const excluded = ['Logo.png', 'Mapa.png', 'vite.svg'];
+          const excluded = ['Logo.png', 'Mapa.png', 'vite.svg', 'IMG1.webp', 'IMG2.webp', 'IMG3.webp', 'IMG4.webp'];
           const filtered = (data || []).filter(x => !excluded.includes(x.name));
           const mapped = filtered.map(x => {
             const path = x.relPath || x.path;
