@@ -34,7 +34,7 @@ function MStudioClient() {
   ];
 
   const [services, setServices] = useState(fallbackServices);
-  const { images } = usePublicImages();
+  const { images, loading } = usePublicImages();
 
   useEffect(() => {
     // subscribe to services collection
