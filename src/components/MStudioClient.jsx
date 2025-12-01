@@ -69,7 +69,7 @@ function MStudioClient() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white font-inter">
+    <div className="min-h-screen bg-[#0A0A0A] text-white font-inter overflow-x-hidden">
       <Header />
 
       <main className="max-w-6xl mx-auto p-4 sm:p-6">
@@ -271,7 +271,7 @@ function Header() {
   const { user, role } = useAuth();
 
   return (
-    <header className="max-w-6xl mx-auto p-4 sm:p-6 flex items-center justify-between flex-wrap gap-4">
+    <header className="max-w-6xl mx-auto p-4 sm:p-6 flex items-center justify-between">
       <div className="flex items-center gap-3 sm:gap-4">
         <img src="/Logo.png" alt="M studio" className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover" />
         <div>
@@ -279,14 +279,14 @@ function Header() {
           <p className="text-xs sm:text-sm text-gray-300">Las Condes · 5.0 · 14 reseñas</p>
         </div>
       </div>
-      <nav className="flex items-center gap-4">
-        <a className="px-4 py-2 rounded-md border border-red-700 text-yellow-300" href="#services">Servicios</a>
-        <Link className="px-4 py-2 rounded-md hover:bg-gray-800" to="/gallery">Galería</Link>
-        <a className="px-4 py-2 rounded-md hover:bg-gray-800" href="#reviews">Reseñas</a>
+      <nav className="flex items-center gap-2 sm:gap-4">
+        <a className="hidden md:block px-4 py-2 rounded-md border border-red-700 text-yellow-300" href="#services">Servicios</a>
+        <Link className="hidden md:block px-4 py-2 rounded-md hover:bg-gray-800" to="/gallery">Galería</Link>
+        <a className="hidden md:block px-4 py-2 rounded-md hover:bg-gray-800" href="#reviews">Reseñas</a>
         {role === 'admin' ? (
-          <a href="/admin" className="px-4 py-2 bg-gray-800 rounded-md border">Panel</a>
+          <a href="/admin" className="px-3 py-1.5 sm:px-4 sm:py-2 bg-gray-800 rounded-md border text-sm">Panel</a>
         ) : (
-          <a href="/login" className="px-4 py-2 bg-red-600 text-white rounded-md">Ingresar</a>
+          <a href="/login" className="px-3 py-1.5 sm:px-4 sm:py-2 bg-red-600 text-white rounded-md text-sm">Ingresar</a>
         )}
       </nav>
     </header>
