@@ -97,6 +97,7 @@ export default function AdminPanel() {
   // If the local server is not available, fall back to Firebase upload.
   const LOCAL_UPLOAD_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000/upload';
   const BACKEND_ORIGIN = import.meta.env.VITE_BACKEND_ORIGIN || (import.meta.env.VITE_BACKEND_URL ? new URL(import.meta.env.VITE_BACKEND_URL).origin : '');
+  const BACKEND_BASE = BACKEND_ORIGIN || 'http://localhost:4000';
   async function uploadLocalToServer(localItem) {
     try {
       const rec = await idbGet(localItem.id);
@@ -454,11 +455,15 @@ export default function AdminPanel() {
                           if (!confirm(`¿Eliminar ${img.name}?`)) return;
                           try {
                             const filename = img.name;
-                            const res = await fetch(`${LOCAL_UPLOAD_URL}/${filename}`, { method: 'DELETE' });
-                            if (!res.ok) throw new Error('Error eliminando imagen');
+                            const res = await fetch(`${BACKEND_BASE}/upload/${filename}`, { method: 'DELETE' });
+                            if (!res.ok) {
+                              const errorData = await res.json().catch(() => ({}));
+                              throw new Error(errorData.error || 'Error eliminando imagen');
+                            }
                             alert('Imagen eliminada. Recarga la página.');
                             window.location.reload();
                           } catch (e) {
+                            console.error('Delete error:', e);
                             alert('Error eliminando imagen: ' + e.message);
                           }
                         }} className="px-3 py-1 border border-red-600 rounded">Eliminar</button>
