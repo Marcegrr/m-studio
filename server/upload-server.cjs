@@ -32,6 +32,41 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
+// Directorio público donde está el índice y los assets
+const publicDir = path.join(__dirname, '..', 'public');
+
+// Servir estáticos de uploads para que los vea el frontend (Netlify apuntará a este dominio para imágenes)
+app.use('/uploads', express.static(uploadsDir));
+
+// Endpoint para servir el índice generado
+app.get('/public-images.json', (req, res) => {
+  const outPath = path.join(publicDir, 'public-images.json');
+  if (fs.existsSync(outPath)) {
+    res.sendFile(outPath);
+  } else {
+    res.status(404).json([]);
+  }
+});
+
+// Healthcheck y raíz informativa
+app.get('/health', (req, res) => {
+  res.json({ ok: true, time: new Date().toISOString() });
+});
+
+app.get('/', (req, res) => {
+  res.json({
+    ok: true,
+    name: 'm-studio upload server',
+    endpoints: {
+      upload: 'POST /upload',
+      delete: 'DELETE /upload/:filename',
+      index: 'GET /public-images.json',
+      files: 'GET /uploads/<file>'
+    },
+    note: 'El frontend se despliega en Netlify. Usa esta URL para imágenes y el índice.'
+  });
+});
+
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, uploadsDir);
@@ -53,7 +88,6 @@ app.post('/upload', upload.single('file'), (req, res) => {
   const url = `/${relPath}`;
   try {
     // Regenerate public-images.json after saving
-    const publicDir = path.join(__dirname, '..', 'public');
     const outPath = path.join(publicDir, 'public-images.json');
     const files = [];
     const walk = (dir) => {
@@ -86,7 +120,6 @@ app.delete('/upload/:filename', (req, res) => {
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
       // Regenerate public-images.json after deletion
-      const publicDir = path.join(__dirname, '..', 'public');
       const outPath = path.join(publicDir, 'public-images.json');
       const files = [];
       const walk = (dir) => {

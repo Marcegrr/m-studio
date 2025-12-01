@@ -96,6 +96,7 @@ export default function AdminPanel() {
   // Try to upload a local item to a local server first (http://localhost:4000/upload).
   // If the local server is not available, fall back to Firebase upload.
   const LOCAL_UPLOAD_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000/upload';
+  const BACKEND_ORIGIN = import.meta.env.VITE_BACKEND_ORIGIN || (import.meta.env.VITE_BACKEND_URL ? new URL(import.meta.env.VITE_BACKEND_URL).origin : '');
   async function uploadLocalToServer(localItem) {
     try {
       const rec = await idbGet(localItem.id);
@@ -159,12 +160,17 @@ export default function AdminPanel() {
     // fetch generated public-images.json
     const fetchPublic = async () => {
       try {
-        const res = await fetch('/public-images.json');
+        const indexUrl = BACKEND_ORIGIN ? `${BACKEND_ORIGIN}/public-images.json` : '/public-images.json';
+        const res = await fetch(indexUrl);
         if (!res.ok) return setPublicImages([]);
         const data = await res.json();
         // filter out internal assets we don't want shown in the editable public list
         const excluded = ['Logo.png', 'Mapa.png', 'vite.svg'];
-        setPublicImages(data.filter(x => !excluded.includes(x.name)));
+        const filtered = data.filter(x => !excluded.includes(x.name)).map(x => ({
+          ...x,
+          url: BACKEND_ORIGIN ? `${BACKEND_ORIGIN}${x.url}` : x.url
+        }));
+        setPublicImages(filtered);
       } catch (e) {
         console.error('Failed to fetch public-images.json', e);
       }

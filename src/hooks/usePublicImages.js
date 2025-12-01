@@ -8,14 +8,20 @@ export function usePublicImages() {
     let active = true;
     (async () => {
       try {
-        const res = await fetch('/public-images.json');
+        const BACKEND_ORIGIN = import.meta.env.VITE_BACKEND_ORIGIN || (import.meta.env.VITE_BACKEND_URL ? new URL(import.meta.env.VITE_BACKEND_URL).origin : '');
+        const indexUrl = BACKEND_ORIGIN ? `${BACKEND_ORIGIN}/public-images.json` : '/public-images.json';
+        const res = await fetch(indexUrl);
         if (!res.ok) {
           if (active) setImages([]);
         } else {
           const data = await res.json();
           const excluded = ['Logo.png', 'Mapa.png', 'vite.svg'];
           const filtered = (data || []).filter(x => !excluded.includes(x.name));
-          const mapped = filtered.map(x => ({ path: x.relPath || x.path, url: x.url }));
+          const mapped = filtered.map(x => {
+            const path = x.relPath || x.path;
+            const url = BACKEND_ORIGIN ? `${BACKEND_ORIGIN}${x.url}` : x.url;
+            return { path, url };
+          });
           if (active) setImages(mapped);
         }
       } catch (e) {
