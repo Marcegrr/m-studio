@@ -72,9 +72,9 @@ function MStudioClient() {
     <div className="min-h-screen bg-[#0A0A0A] text-white font-inter">
       <Header />
 
-      <main className="max-w-6xl mx-auto p-6">
+      <main className="max-w-6xl mx-auto p-4 sm:p-6">
         {/* Hero */}
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center mb-12">
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 items-center mb-8 sm:mb-12">
           <div>
             <h2 className="text-4xl font-bold">M studio</h2>
             <p className="mt-4 text-gray-300">Nuestro Propósito es transformar la imagen de nuestros clientes con precisión, estilo y autenticidad, combinando tradición, innovación y las últimas tendencias urbanas.</p>
@@ -101,9 +101,9 @@ function MStudioClient() {
         </section>
 
         {/* Services */}
-        <section id="services" className="mb-12">
-          <h3 className="text-2xl font-semibold mb-4">Servicios</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <section id="services" className="mb-8 sm:mb-12">
+          <h3 className="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4">Servicios</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
             {services.map((s) => (
               <div key={s.id ?? s.title} className="bg-[#0f0f0f] rounded-xl p-6 border border-gray-800">
                 <h4 className="text-xl font-semibold">{s.title}</h4>
@@ -169,26 +169,26 @@ function MStudioClient() {
           <h3 className="text-2xl font-semibold mb-4"><Link to="/gallery" className="hover:underline">Galería</Link></h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {loading ? (
-              <div className="col-span-2 md:col-span-4 text-center text-gray-400 py-4">Cargando galería...</div>
+              <div className="col-span-2 md:col-span-4 text-center text-gray-400 py-4 text-sm">Cargando galería...</div>
             ) : images && images.length > 0 ? (
               images.slice(0,4).map((p, i) => (
-                <Link key={`pub-${p.path}-${i}`} to="/gallery" className="h-40 bg-gray-800 rounded-lg overflow-hidden block">
+                <Link key={`pub-${p.path}-${i}`} to="/gallery" className="h-32 sm:h-40 bg-gray-800 rounded-lg overflow-hidden block">
                   <img src={p.url} alt={p.path} className="w-full h-full object-cover" />
                 </Link>
               ))
             ) : (
-              <div className="col-span-2 md:col-span-4 text-center text-gray-400 py-4">
+              <div className="col-span-2 md:col-span-4 text-center text-gray-400 py-4 text-xs sm:text-sm">
                 <p>No hay imágenes en la galería aún.</p>
-                <p className="text-sm mt-2">El administrador puede subir imágenes desde el panel.</p>
+                <p className="mt-2">El administrador puede subir imágenes desde el panel.</p>
               </div>
             )}
           </div>
         </section>
 
         {/* Contact */}
-        <section id="contact" className="mb-24">
-          <h3 className="text-2xl font-semibold mb-4">Contacto</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <section id="contact" className="mb-8 sm:mb-24">
+          <h3 className="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4">Contacto</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             <div className="bg-[#0f0f0f] rounded-xl p-6 border border-gray-800">
               <p className="font-semibold">M studio</p>
               <p className="text-sm text-gray-400 mt-1">Nuestra política de reservas</p>
@@ -271,12 +271,12 @@ function Header() {
   const { user, role } = useAuth();
 
   return (
-    <header className="max-w-6xl mx-auto p-6 flex items-center justify-between">
-      <div className="flex items-center gap-4">
-        <img src="/Logo.png" alt="M studio" className="w-12 h-12 rounded-full object-cover" />
+    <header className="max-w-6xl mx-auto p-4 sm:p-6 flex items-center justify-between flex-wrap gap-4">
+      <div className="flex items-center gap-3 sm:gap-4">
+        <img src="/Logo.png" alt="M studio" className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover" />
         <div>
-          <h1 className="text-2xl font-semibold">M studio</h1>
-          <p className="text-sm text-gray-300">Las Condes · 5.0 · 14 reseñas</p>
+          <h1 className="text-xl sm:text-2xl font-semibold">M studio</h1>
+          <p className="text-xs sm:text-sm text-gray-300">Las Condes · 5.0 · 14 reseñas</p>
         </div>
       </div>
       <nav className="flex items-center gap-4">
