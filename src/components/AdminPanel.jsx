@@ -432,12 +432,16 @@ export default function AdminPanel() {
               publicImages.map(img => {
                 const id = encodeURIComponent(img.relPath);
                 const noteDoc = publicNotes[id];
+                // Solo permitir eliminar imágenes en /uploads (subidas por admin)
+                const canDelete = img.relPath.startsWith('uploads/');
                 return (
                   <div key={img.relPath} className="flex gap-3 items-start bg-gray-900 p-3 rounded">
                     <img src={img.url} alt={img.name} className="w-24 h-16 object-cover rounded" />
                     <div className="flex-1">
                       <div className="text-sm text-gray-300 font-medium">{img.name}</div>
                       <div className="text-xs text-gray-500">Ruta: <code>/{img.relPath}</code></div>
+                      {canDelete && <div className="text-xs text-gray-600 mt-1">Imagen subida por admin (puede eliminarse)</div>}
+                      {!canDelete && <div className="text-xs text-gray-600 mt-1">Imagen estática del proyecto (no eliminable)</div>}
                       <div className="mt-2 flex gap-2">
                         <input defaultValue={noteDoc?.note || ''} id={`note-${id}`} className="flex-1 px-2 py-1 bg-gray-800 rounded text-sm" placeholder="Nota/ubicación (ej: hero banner, footer, tarjeta)" />
                         <button onClick={async () => {
@@ -451,22 +455,24 @@ export default function AdminPanel() {
                             alert('Error guardando nota: ' + e.message);
                           }
                         }} className="px-3 py-1 bg-red-600 rounded">Guardar</button>
-                        <button onClick={async () => {
-                          if (!confirm(`¿Eliminar ${img.name}?`)) return;
-                          try {
-                            const filename = img.name;
-                            const res = await fetch(`${BACKEND_BASE}/upload/${filename}`, { method: 'DELETE' });
-                            if (!res.ok) {
-                              const errorData = await res.json().catch(() => ({}));
-                              throw new Error(errorData.error || 'Error eliminando imagen');
+                        {canDelete && (
+                          <button onClick={async () => {
+                            if (!confirm(`¿Eliminar ${img.name}?`)) return;
+                            try {
+                              const filename = img.name;
+                              const res = await fetch(`${BACKEND_BASE}/upload/${filename}`, { method: 'DELETE' });
+                              if (!res.ok) {
+                                const errorData = await res.json().catch(() => ({}));
+                                throw new Error(errorData.error || 'Error eliminando imagen');
+                              }
+                              alert('Imagen eliminada. Recarga la página.');
+                              window.location.reload();
+                            } catch (e) {
+                              console.error('Delete error:', e);
+                              alert('Error eliminando imagen: ' + e.message);
                             }
-                            alert('Imagen eliminada. Recarga la página.');
-                            window.location.reload();
-                          } catch (e) {
-                            console.error('Delete error:', e);
-                            alert('Error eliminando imagen: ' + e.message);
-                          }
-                        }} className="px-3 py-1 border border-red-600 rounded">Eliminar</button>
+                          }} className="px-3 py-1 border border-red-600 rounded">Eliminar</button>
+                        )}
                       </div>
                     </div>
                   </div>
