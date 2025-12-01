@@ -91,11 +91,11 @@ function MStudioClient() {
             </div>
           </div>
 
-          <div className="h-72 rounded-xl overflow-hidden bg-gradient-to-br from-gray-800 to-black flex items-center justify-center">
+          <div className="rounded-xl overflow-hidden bg-gradient-to-br from-gray-800 to-black">
             <img 
               src="/baner barberia.webp"
               alt="Maldaoso Barber Studio"
-              className="w-full h-full object-cover"
+              className="w-full h-auto object-contain"
             />
           </div>
         </section>
