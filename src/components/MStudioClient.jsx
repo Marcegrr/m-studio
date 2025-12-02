@@ -1,30 +1,37 @@
 import React, { useEffect, useState } from "react";
-import { Link, BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Link, BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from '../context/AuthContext';
+import { CartProvider } from '../context/CartContext';
 import Login from './Login';
 import AdminPanel from './AdminPanel';
 import ProtectedRoute from './ProtectedRoute';
 import GalleryPage from './GalleryPage';
+import ProductsPage from './ProductsPage';
 import { collection, query, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase/firebaseConfig';
 import { usePublicImages } from '../hooks/usePublicImages';
+import SiteHeader from './SiteHeader';
 
 export default function MStudioClientApp() {
   return (
     <AuthProvider>
-      <Router>
-        <Routes>
-          <Route path="/" element={<MStudioClient />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/admin" element={<ProtectedRoute requiredRole={'admin'}><AdminPanel /></ProtectedRoute>} />
-          <Route path="/gallery" element={<GalleryPage />} />
-        </Routes>
-      </Router>
+      <CartProvider>
+        <Router>
+          <Routes>
+            <Route path="/" element={<MStudioClient />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/admin" element={<ProtectedRoute requiredRole={'admin'}><AdminPanel /></ProtectedRoute>} />
+            <Route path="/gallery" element={<GalleryPage />} />
+            <Route path="/products" element={<ProductsPage />} />
+          </Routes>
+        </Router>
+      </CartProvider>
     </AuthProvider>
   );
 }
 
 function MStudioClient() {
+  const { hash } = useLocation();
   const pdfUrl = "/mnt/data/M studio _ Las Condes [ Reserva ahora ].pdf";
 
   const fallbackServices = [
@@ -59,6 +66,20 @@ function MStudioClient() {
     }
   }, []);
 
+  // Smooth scroll to section when hash changes
+  useEffect(() => {
+    if (hash) {
+      const id = hash.replace('#', '');
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    } else {
+      // When navigating to '/', scroll to top
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [hash]);
+
   const reviews = [
     { name: "Matias", text: "Excelente servicio 🙌🏼" },
     { name: "Lucas", text: "Muy atento y amable , nos preguntó y aconsejo y respondió nuestras dudas respecto al corte y tipo de cabello ." },
@@ -70,7 +91,9 @@ function MStudioClient() {
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-white font-inter overflow-x-hidden">
-      <Header />
+      <SiteHeader />
+      {/* Spacer to offset fixed header height */}
+      <div className="h-16" />
 
       <main className="max-w-6xl mx-auto p-4 sm:p-6">
         {/* Hero */}
@@ -101,7 +124,7 @@ function MStudioClient() {
         </section>
 
         {/* Services */}
-        <section id="services" className="mb-8 sm:mb-12">
+        <section id="services" className="scroll-mt-16 md:scroll-mt-20 mb-8 sm:mb-12">
           <h3 className="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4">Servicios</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
             {services.map((s) => (
@@ -123,7 +146,7 @@ function MStudioClient() {
         </section>
 
         {/* Equipo */}
-        <section className="mb-12">
+        <section id="team" className="scroll-mt-16 md:scroll-mt-20 mb-12">
           <h3 className="text-2xl font-semibold mb-4">Equipo</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-[#0f0f0f] rounded-xl p-6 border border-gray-800 flex gap-4 items-center">
@@ -146,7 +169,7 @@ function MStudioClient() {
         </section>
 
         {/* Reviews */}
-        <section id="reviews" className="mb-12">
+        <section id="reviews" className="scroll-mt-16 md:scroll-mt-20 mb-12">
           <h3 className="text-2xl font-semibold mb-4">Reseñas</h3>
           <div className="space-y-4">
             <div className="flex items-center gap-4">
@@ -165,7 +188,7 @@ function MStudioClient() {
         </section>
 
         {/* Gallery */}
-        <section id="gallery" className="mb-12">
+        <section id="gallery" className="scroll-mt-16 md:scroll-mt-20 mb-12">
           <h3 className="text-2xl font-semibold mb-4"><Link to="/gallery" className="hover:underline">Galería</Link></h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {loading ? (
@@ -186,7 +209,7 @@ function MStudioClient() {
         </section>
 
         {/* Contact */}
-        <section id="contact" className="mb-8 sm:mb-24">
+        <section id="contact" className="scroll-mt-16 md:scroll-mt-20 mb-8 sm:mb-24">
           <h3 className="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4">Contacto</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             <div className="bg-[#0f0f0f] rounded-xl p-6 border border-gray-800">
@@ -263,32 +286,25 @@ function MStudioClient() {
           alt="Click here to book the appointment using setmore"
         />
       </a>
+
+      {/* Floating Instagram button (bottom-left persistent) */}
+      <a
+        href="https://www.instagram.com/maldaoso_barber/"
+        target="_blank"
+        rel="noreferrer"
+        aria-label="Instagram maldaoso_barber"
+        style={{
+          position: 'fixed',
+          left: '12px',
+          bottom: '12px',
+          zIndex: 20000
+        }}
+        className="inline-flex items-center justify-center w-10 h-10 rounded-full border border-[#E50914] text-white bg-[#121212]/80 backdrop-blur hover:bg-[#E50914] transition-colors shadow-md"
+      >
+        <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor" aria-hidden="true">
+          <path d="M12 2.2c3.2 0 3.6 0 4.9.1 1.2.1 1.9.3 2.3.5.6.2 1 .6 1.5 1.1.5.5.9.9 1.1 1.5.2.4.4 1.1.5 2.3.1 1.3.1 1.7.1 4.9s0 3.6-.1 4.9c-.1 1.2-.3 1.9-.5 2.3-.2.6-.6 1-1.1 1.5-.5.5-.9.9-1.5 1.1-.4.2-1.1.4-2.3.5-1.3.1-1.7.1-4.9.1s-3.6 0-4.9-.1c-1.2-.1-1.9-.3-2.3-.5-.6-.2-1-.6-1.5-1.1-.5-.5-.9-.9-1.1-1.5-.2-.4-.4-1.1-.5-2.3C2.2 15.6 2.2 15.2 2.2 12s0-3.6.1-4.9c.1-1.2.3-1.9.5-2.3.2-.6.6-1 1.1-1.5.5-.5.9-.9 1.5-1.1.4-.2 1.1-.4 2.3-.5C8.4 2.2 8.8 2.2 12 2.2zm0 1.8c-3.1 0-3.5 0-4.8.1-1 .1-1.6.3-2 .4-.5.2-.8.4-1.2.8-.4.4-.6.7-.8 1.2-.1.4-.3 1-.4 2-.1 1.3-.1 1.7-.1 4.7s0 3.4.1 4.7c.1 1 .3 1.6.4 2 .2.5.4.8.8 1.2.4.4.7.6 1.2.8.4.1 1 .3 2 .4 1.3.1 1.7.1 4.7.1s3.4 0 4.7-.1c1-.1 1.6-.3 2-.4.5-.2.8-.4 1.2-.8.4-.4.6-.7.8-1.2.1-.4.3-1 .4-2 .1-1.3.1-1.7.1-4.7s0-3.4-.1-4.7c-.1-1-.3-1.6-.4-2-.2-.5-.4-.8-.8-1.2-.4-.4-.7-.6-1.2-.8-.4-.1-1-.3-2-.4-1.3-.1-1.7-.1-4.8-.1zm0 3.2a5.8 5.8 0 1 1 0 11.6 5.8 5.8 0 0 1 0-11.6zm0 9.6a3.8 3.8 0 1 0 0-7.6 3.8 3.8 0 0 0 0 7.6zm6.9-10.9a1.4 1.4 0 1 1-2.8 0 1.4 1.4 0 0 1 2.8 0z" />
+        </svg>
+      </a>
     </div>
-  );
-}
-
-function Header() {
-  const { user, role } = useAuth();
-
-  return (
-    <header className="max-w-6xl mx-auto p-4 sm:p-6 flex items-center justify-between">
-      <div className="flex items-center gap-3 sm:gap-4">
-        <img src="/Logo.png" alt="M studio" className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover" />
-        <div>
-          <h1 className="text-xl sm:text-2xl font-semibold">M studio</h1>
-          <p className="text-xs sm:text-sm text-gray-300">Las Condes · 5.0 · 14 reseñas</p>
-        </div>
-      </div>
-      <nav className="flex items-center gap-2 sm:gap-4">
-        <a className="hidden md:block px-4 py-2 rounded-md border border-red-700 text-yellow-300" href="#services">Servicios</a>
-        <Link className="hidden md:block px-4 py-2 rounded-md hover:bg-gray-800" to="/gallery">Galería</Link>
-        <a className="hidden md:block px-4 py-2 rounded-md hover:bg-gray-800" href="#reviews">Reseñas</a>
-        {role === 'admin' ? (
-          <a href="/admin" className="px-3 py-1.5 sm:px-4 sm:py-2 bg-gray-800 rounded-md border text-sm">Panel</a>
-        ) : (
-          <a href="/login" className="px-3 py-1.5 sm:px-4 sm:py-2 bg-red-600 text-white rounded-md text-sm">Ingresar</a>
-        )}
-      </nav>
-    </header>
   );
 }

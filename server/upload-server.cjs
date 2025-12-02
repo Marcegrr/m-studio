@@ -149,6 +149,17 @@ app.delete('/upload/:filename', (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Upload server listening on http://localhost:${PORT}`);
+});
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use. Trying port ${PORT + 1}...`);
+    server.listen(PORT + 1, () => {
+      console.log(`Upload server listening on http://localhost:${PORT + 1}`);
+    });
+  } else {
+    console.error('Server error:', err);
+  }
 });
