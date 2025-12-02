@@ -354,7 +354,6 @@ export default function Cart({ onClose }) {
                 <li>• Tu pedido estará disponible para retiro en <strong>3 días hábiles</strong></li>
                 <li>• Retiro en tienda: Sandro Botticelli 7889, Las Condes</li>
                 <li>• Recibirás un código único para retirar tu pedido</li>
-                <li>• El stock se descontará al confirmar el pedido</li>
               </ul>
             </div>
 
