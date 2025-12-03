@@ -1,10 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { usePublicImages } from '../hooks/usePublicImages';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { db } from '../firebase/firebaseConfig';
 
 export default function GalleryPage(){
-  const { images, loading } = usePublicImages();
+  const [images, setImages] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(null);
+
+  useEffect(() => {
+    const loadImages = async () => {
+      try {
+        const q = query(collection(db, 'gallery'), orderBy('createdAt', 'desc'));
+        const snap = await getDocs(q);
+        const imgs = snap.docs.map(d => d.data());
+        setImages(imgs);
+      } catch (err) {
+        console.error('Error loading gallery:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadImages();
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-white font-inter">
@@ -58,19 +76,22 @@ export default function GalleryPage(){
         <div className="w-full max-w-[768px] grid grid-cols-1 sm:grid-cols-2 gap-[2px]">
           {loading ? (
             <div className="col-span-full text-gray-400 py-8 text-center">Cargando imágenes...</div>
-          ) : images && images.length > 0 ? (
-            images.filter(p => !p.path.includes('baner barberia')).map((p, i) => (
-              <div key={`pub-${p.path}-${i}`} className="p-[2px] overflow-hidden">
+          ) : images.length > 0 ? (
+            images.map((img, i) => (
+              <div key={`img-${i}`} className="p-[2px] overflow-hidden">
                 <img 
-                  src={p.url} 
-                  alt={p.path} 
+                  src={img.imageUrl} 
+                  alt={img.filename || `Imagen ${i+1}`}
                   className="w-full h-auto aspect-[384/259.656] object-cover cursor-pointer hover:scale-105 transition-transform duration-300"
-                  onClick={() => setSelectedImage(p.url)}
+                  onClick={() => setSelectedImage(img.imageUrl)}
                 />
               </div>
             ))
           ) : (
-            <div className="col-span-full text-gray-400 py-8 text-center px-4">No hay imágenes disponibles. Sube algunas desde el panel de administrador.</div>
+            <div className="col-span-full text-center text-gray-400 py-12">
+              <p>No hay imágenes en la galería.</p>
+              <p className="text-sm mt-2">El administrador puede agregar imágenes desde el panel.</p>
+            </div>
           )}
         </div>
       </div>
