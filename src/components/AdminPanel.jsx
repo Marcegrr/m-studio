@@ -441,31 +441,7 @@ export default function AdminPanel() {
             ))}
           </ul>
           <div className="mt-4">
-            <div className="flex gap-2">
-              <button onClick={addService} className="px-4 py-2 bg-red-600 rounded">Añadir servicio</button>
-              <button onClick={async () => {
-                const confirmSeed = confirm('Crear servicios predeterminados (sin imágenes) en Firestore?');
-                if (!confirmSeed) return;
-                try {
-                  // check if there are already services
-                  const snap = await (await import('firebase/firestore')).getDocs((await import('firebase/firestore')).collection(db, 'services'));
-                  if (!snap.empty) {
-                    if (!confirm('Ya existen servicios. ¿Deseas añadir los predeterminados de todas formas?')) return;
-                  }
-                  const examples = [
-                    { title: 'Corte de pelo', duration: '1h', price: '15.000 $' },
-                    { title: 'Corte de pelo + barba', duration: '1h 30min', price: '17.000 $' },
-                    { title: 'Arreglo de barba', duration: '30min', price: '7.000 $' }
-                  ];
-                  for (const s of examples) {
-                    await addDoc(collection(db, 'services'), { ...s, createdAt: serverTimestamp() });
-                  }
-                  alert('Servicios predeterminados creados. Recarga la página si no aparecen.');
-                } catch (err) {
-                  alert('Error creando servicios predeterminados: ' + err.message);
-                }
-              }} className="px-4 py-2 border rounded">Servicios predeterminados</button>
-            </div>
+            <button onClick={addService} className="px-4 py-2 bg-red-600 rounded">Añadir servicio</button>
           </div>
         </div>
 
@@ -491,10 +467,7 @@ export default function AdminPanel() {
             ))}
           </ul>
           <div className="mt-4">
-            <div className="flex gap-2">
-              <button onClick={addProduct} className="px-4 py-2 bg-red-600 rounded">Añadir producto</button>
-              <button onClick={seedProducts} className="px-4 py-2 border rounded">Productos de ejemplo</button>
-            </div>
+            <button onClick={addProduct} className="px-4 py-2 bg-red-600 rounded">Añadir producto</button>
           </div>
         </div>
 
