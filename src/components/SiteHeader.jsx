@@ -59,7 +59,9 @@ export default function SiteHeader() {
 
             {role === 'admin' ? (
               <a href="/admin" className="ml-2 px-3 py-2 rounded-full border border-[#242424] text-xs sm:text-sm text-[#F5F5F5] hover:bg-[#151515] transition-colors">Panel</a>
-            ) : null}
+            ) : (
+              <Link to="/admin" className="ml-2 px-3 py-2 rounded-full border border-[#242424] text-xs sm:text-sm text-[#F5F5F5] hover:bg-[#151515] transition-colors">Ingresar</Link>
+            )}
           </nav>
         </div>
       </header>
