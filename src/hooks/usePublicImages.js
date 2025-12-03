@@ -8,9 +8,8 @@ export function usePublicImages() {
     let active = true;
     (async () => {
       try {
-        const BACKEND_ORIGIN = import.meta.env.VITE_BACKEND_ORIGIN || (import.meta.env.VITE_BACKEND_URL ? new URL(import.meta.env.VITE_BACKEND_URL).origin : '');
-        const indexUrl = BACKEND_ORIGIN ? `${BACKEND_ORIGIN}/public-images.json` : '/public-images.json';
-        const res = await fetch(indexUrl);
+        // Siempre usar la ruta local en producción
+        const res = await fetch('/public-images.json');
         if (!res.ok) {
           if (active) setImages([]);
         } else {
@@ -19,12 +18,13 @@ export function usePublicImages() {
           const filtered = (data || []).filter(x => !excluded.includes(x.name));
           const mapped = filtered.map(x => {
             const path = x.relPath || x.path;
-            const url = BACKEND_ORIGIN ? `${BACKEND_ORIGIN}${x.url}` : x.url;
+            const url = x.url;
             return { path, url };
           });
           if (active) setImages(mapped);
         }
       } catch (e) {
+        console.error('Error loading gallery images:', e);
         if (active) setImages([]);
       } finally {
         if (active) setLoading(false);
