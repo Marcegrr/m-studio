@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
-import GalleryAdmin from './GalleryAdmin';
 import { db } from '../firebase/firebaseConfig';
 import {
   collection,
@@ -597,13 +596,133 @@ export default function AdminPanel() {
           )}
         </div>
 
+        <div className="bg-[#0f0f0f] p-4 rounded">
+          <h2 className="font-semibold mb-2">Galería</h2>
+          <div className="mt-3">
+            <input ref={fileInputRef} onChange={onFileChange} type="file" accept="image/*" multiple className="text-sm" />
+            <p className="text-xs text-gray-500 mt-2">Puedes seleccionar múltiples imágenes a la vez</p>
+          </div>
+        </div>
 
-        <GalleryAdmin />
+        {localGallery.length > 0 && (
+          <div className="bg-[#0f0f0f] p-4 rounded mt-6">
+            <h2 className="font-semibold mb-2">Imágenes guardadas localmente</h2>
+            <p className="text-sm text-gray-400">Estas imágenes están guardadas en tu navegador y no se han subido al servidor.</p>
+            <div className="mt-3 flex items-center gap-3">
+              <button onClick={async () => {
+                if (!confirm('Subir todas las imágenes locales al servidor?')) return;
+                for (const item of localGallery.slice()) {
+                  // upload sequentially
+                  // eslint-disable-next-line no-await-in-loop
+                  await uploadLocalToServer(item);
+                }
+                alert('Proceso de subida finalizado.');
+              }} className="px-3 py-2 bg-red-600 rounded">Subir todas</button>
+              <button onClick={async () => {
+                try {
+                  if (!window.JSZip) return alert('JSZip no cargado');
+                  const zip = new window.JSZip();
+                  for (const item of localGallery) {
+                    const rec = await idbGet(item.id);
+                    if (!rec) continue;
+                    zip.file(rec.name, rec.blob);
+                  }
+                  const content = await zip.generateAsync({ type: 'blob' });
+                  const url = URL.createObjectURL(content);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = 'mstudio-local-images.zip';
+                  document.body.appendChild(a);
+                  a.click();
+                  a.remove();
+                  URL.revokeObjectURL(url);
+                } catch (e) {
+                  console.error('Error generando ZIP', e);
+                  alert('Error generando ZIP: ' + e.message);
+                }
+              }} className="px-3 py-2 border rounded">Exportar ZIP</button>
+            </div>
+            <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+              {localGallery.map(item => (
+                <div key={item.id} className="bg-gray-900 p-3 rounded">
+                  <img src={item.url} alt={item.name} className="w-full h-28 object-cover rounded" />
+                  <div className="mt-2 flex items-center justify-between">
+                    <div className="text-sm text-gray-300 truncate">{item.name}</div>
+                    <div className="flex gap-2">
+                      <button onClick={() => uploadLocalToServer(item)} className="px-2 py-1 bg-red-600 rounded text-sm">Subir</button>
+                      <button onClick={async () => { await idbDelete(item.id); setLocalGallery(prev => prev.filter(p => p.id !== item.id)); }} className="px-2 py-1 border rounded text-sm">Borrar</button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
+        <div className="bg-[#0f0f0f] p-4 rounded mt-6">
+          <h2 className="font-semibold mb-2">Imágenes públicas</h2>
+
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            {publicImages.length === 0 ? (
+              <div className="text-sm text-gray-400">No se encontraron imágenes en `public/`. Ejecuta <code>npm run generate:public-images</code> desde el proyecto y recarga.</div>
+            ) : (
+              publicImages.map(img => {
+                const id = encodeURIComponent(img.relPath);
+                const noteDoc = publicNotes[id];
+                // Solo permitir eliminar imágenes en /uploads (subidas por admin)
+                const canDelete = img.relPath.startsWith('uploads/');
+                return (
+                  <div key={img.relPath} className="flex gap-3 items-start bg-gray-900 p-3 rounded">
+                    <img src={img.url} alt={img.name} className="w-24 h-16 object-cover rounded" />
+                    <div className="flex-1">
+                      <div className="text-sm text-gray-300 font-medium">{img.name}</div>
+                      <div className="text-xs text-gray-500">Ruta: <code>/{img.relPath}</code></div>
+                      {canDelete && <div className="text-xs text-gray-600 mt-1">Imagen subida por admin (puede eliminarse)</div>}
+                      {!canDelete && <div className="text-xs text-gray-600 mt-1">Imagen estática del proyecto (no eliminable)</div>}
+                      <div className="mt-2 flex gap-2">
+                        <input defaultValue={noteDoc?.note || ''} id={`note-${id}`} className="flex-1 px-2 py-1 bg-gray-800 rounded text-sm" placeholder="Nota/ubicación (ej: hero banner, footer, tarjeta)" />
+                        <button onClick={async () => {
+                          const el = document.getElementById(`note-${id}`);
+                          const note = el?.value ?? '';
+                          try {
+                            await setDoc(doc(db, 'public_images', id), { path: img.relPath, note, updatedAt: serverTimestamp() });
+                            setPublicNotes(prev => ({ ...prev, [id]: { path: img.relPath, note } }));
+                            alert('Nota guardada');
+                          } catch (e) {
+                            alert('Error guardando nota: ' + e.message);
+                          }
+                        }} className="px-3 py-1 bg-red-600 rounded">Guardar</button>
+                        {canDelete && (
+                          <button onClick={async () => {
+                            if (!confirm(`¿Eliminar ${img.name}?`)) return;
+                            try {
+                              const filename = img.name;
+                              const res = await fetch(`${BACKEND_BASE}/upload/${filename}`, { method: 'DELETE' });
+                              if (!res.ok) {
+                                const errorData = await res.json().catch(() => ({}));
+                                throw new Error(errorData.error || 'Error eliminando imagen');
+                              }
+                              alert('Imagen eliminada. Recarga la página.');
+                              window.location.reload();
+                            } catch (e) {
+                              console.error('Delete error:', e);
+                              alert('Error eliminando imagen: ' + e.message);
+                            }
+                          }} className="px-3 py-1 border border-red-600 rounded">Eliminar</button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        <div className="mt-6 flex gap-2">
           <button onClick={logout} className="px-4 py-2 border rounded">Cerrar sesión</button>
         </div>
       </div>
     </div>
   );
 }
-
