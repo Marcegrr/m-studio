@@ -719,9 +719,9 @@ export default function AdminPanel() {
           )}
         </div>
 
-
         <GalleryAdmin />
 
+        <div className="mt-6 flex gap-2">
           <button onClick={logout} className="px-4 py-2 border rounded">Cerrar sesión</button>
         </div>
       </div>
