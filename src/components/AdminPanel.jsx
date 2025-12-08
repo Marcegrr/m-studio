@@ -33,6 +33,14 @@ export default function AdminPanel() {
   const [saveLocally, setSaveLocally] = useState(true);
   const [localGallery, setLocalGallery] = useState([]);
   const fileInputRef = useRef(null);
+  const [showNewServiceForm, setShowNewServiceForm] = useState(false);
+  const [newService, setNewService] = useState({
+    title: '',
+    duration: '',
+    price: ''
+  });
+  const [editingServiceId, setEditingServiceId] = useState(null);
+  const [editingServiceData, setEditingServiceData] = useState(null);
   const [newProduct, setNewProduct] = useState({
     name: '',
     description: '',
@@ -43,6 +51,7 @@ export default function AdminPanel() {
   });
   const [editingProductId, setEditingProductId] = useState(null);
   const [editingProductData, setEditingProductData] = useState(null);
+  const [showNewProductForm, setShowNewProductForm] = useState(false);
 
   // --- simple IndexedDB helpers (no dependency) ---
   const DB_NAME = 'mstudio-local';
@@ -225,27 +234,53 @@ export default function AdminPanel() {
     loadNotes();
   }, []);
 
-  const addService = async () => {
-    const title = prompt('Nombre servicio');
-    if (!title) return;
-    const duration = prompt('Duración');
-    const price = prompt('Precio');
+  const addService = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!newService.title.trim()) {
+      alert('El servicio debe tener un nombre');
+      return;
+    }
     try {
-      const docRef = await addDoc(collection(db, 'services'), { title, duration, price, createdAt: serverTimestamp() });
-      console.debug('[AdminPanel] added service id=', docRef.id);
+      const payload = {
+        title: newService.title.trim(),
+        duration: newService.duration.trim(),
+        price: newService.price.trim(),
+        createdAt: serverTimestamp()
+      };
+      await addDoc(collection(db, 'services'), payload);
+      setNewService({ title: '', duration: '', price: '' });
+      setShowNewServiceForm(false);
+      alert('Servicio agregado correctamente');
     } catch (err) {
       alert('Error añadiendo servicio: ' + err.message);
     }
   };
 
-  const editService = async (s) => {
-    const title = prompt('Nombre servicio', s.title);
-    if (!title) return;
-    const duration = prompt('Duración', s.duration);
-    const price = prompt('Precio', s.price);
+  const startEditService = (service) => {
+    setEditingServiceId(service.id);
+    setEditingServiceData({
+      title: service.title || '',
+      duration: service.duration || '',
+      price: service.price || ''
+    });
+  };
+
+  const saveEditService = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!editingServiceId || !editingServiceData) return;
+    if (!editingServiceData.title.trim()) {
+      alert('El servicio debe tener un nombre');
+      return;
+    }
     try {
-      await updateDoc(doc(db, 'services', s.id), { title, duration, price });
-      console.debug('[AdminPanel] updated service id=', s.id);
+      await updateDoc(doc(db, 'services', editingServiceId), {
+        title: editingServiceData.title.trim(),
+        duration: editingServiceData.duration.trim(),
+        price: editingServiceData.price.trim()
+      });
+      setEditingServiceId(null);
+      setEditingServiceData(null);
+      alert('Servicio actualizado');
     } catch (err) {
       alert('Error editando servicio: ' + err.message);
     }
@@ -255,6 +290,10 @@ export default function AdminPanel() {
     if (!confirm('¿Eliminar servicio?')) return;
     try {
       await deleteDoc(doc(db, 'services', s.id));
+      if (editingServiceId === s.id) {
+        setEditingServiceId(null);
+        setEditingServiceData(null);
+      }
       console.debug('[AdminPanel] deleted service id=', s.id);
     } catch (err) {
       alert('Error eliminando servicio: ' + err.message);
@@ -444,32 +483,114 @@ export default function AdminPanel() {
         </div>
 
         <div className="bg-[#0f0f0f] p-4 rounded mb-6">
-          <h2 className="font-semibold mb-2">Servicios</h2>
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <h2 className="font-semibold mb-0">Servicios</h2>
+            <button
+              type="button"
+              onClick={() => setShowNewServiceForm(prev => !prev)}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded text-sm font-medium"
+            >
+              {showNewServiceForm ? 'Cerrar formulario' : 'Añadir servicio'}
+            </button>
+          </div>
+
+          {showNewServiceForm && (
+            <form onSubmit={addService} className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+              <input
+                className="bg-gray-900 rounded px-2 py-1"
+                placeholder="Nombre del servicio"
+                value={newService.title}
+                onChange={e => setNewService({ ...newService, title: e.target.value })}
+                required
+              />
+              <input
+                className="bg-gray-900 rounded px-2 py-1"
+                placeholder="Duración"
+                value={newService.duration}
+                onChange={e => setNewService({ ...newService, duration: e.target.value })}
+              />
+              <input
+                className="bg-gray-900 rounded px-2 py-1"
+                placeholder="Precio"
+                value={newService.price}
+                onChange={e => setNewService({ ...newService, price: e.target.value })}
+              />
+              <div className="md:col-span-3">
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded text-sm font-medium"
+                >
+                  Guardar servicio
+                </button>
+              </div>
+            </form>
+          )}
+
           <ul className="space-y-2">
             {services.map((s) => (
-              <li key={s.id} className="flex justify-between items-center p-2 bg-gray-900 rounded">
-                <div>
-                  <div className="font-semibold">{s.title}</div>
-                  <div className="text-sm text-gray-400">{s.duration} · {s.price}</div>
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={() => editService(s)} className="px-3 py-1 border rounded">Editar</button>
-                  <button onClick={() => removeService(s)} className="px-3 py-1 bg-red-600 rounded">Eliminar</button>
-                </div>
+              <li key={s.id} className="p-2 bg-gray-900 rounded">
+                {editingServiceId === s.id && editingServiceData ? (
+                  <form onSubmit={saveEditService} className="grid grid-cols-1 md:grid-cols-4 gap-2 text-sm">
+                    <input
+                      className="bg-gray-800 rounded px-2 py-1"
+                      value={editingServiceData.title}
+                      onChange={e => setEditingServiceData({ ...editingServiceData, title: e.target.value })}
+                      required
+                    />
+                    <input
+                      className="bg-gray-800 rounded px-2 py-1"
+                      value={editingServiceData.duration}
+                      onChange={e => setEditingServiceData({ ...editingServiceData, duration: e.target.value })}
+                    />
+                    <input
+                      className="bg-gray-800 rounded px-2 py-1"
+                      value={editingServiceData.price}
+                      onChange={e => setEditingServiceData({ ...editingServiceData, price: e.target.value })}
+                    />
+                    <div className="flex gap-2">
+                      <button type="submit" className="px-3 py-1 bg-green-600 rounded">Guardar</button>
+                      <button
+                        type="button"
+                        onClick={() => { setEditingServiceId(null); setEditingServiceData(null); }}
+                        className="px-3 py-1 border rounded"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className="flex justify-between items-center gap-3">
+                    <div>
+                      <div className="font-semibold">{s.title}</div>
+                      <div className="text-sm text-gray-400">{s.duration} · {s.price}</div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <button onClick={() => startEditService(s)} className="px-3 py-1 border rounded text-sm">Editar</button>
+                      <button onClick={() => removeService(s)} className="px-3 py-1 bg-red-600 rounded text-sm">Eliminar</button>
+                    </div>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
-          <div className="mt-4">
-            <button onClick={addService} className="px-4 py-2 bg-red-600 rounded">Añadir servicio</button>
-          </div>
         </div>
 
         <div className="bg-[#0f0f0f] p-4 rounded mt-6 mb-6">
           <h2 className="font-semibold mb-2">Productos</h2>
 
-          <div className="mb-4">
-            <h3 className="text-sm font-semibold mb-2">Crear nuevo producto</h3>
-            <form onSubmit={addProduct} className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <h3 className="text-sm font-semibold text-gray-300">Crear nuevo producto</h3>
+            <button
+              type="button"
+              onClick={() => setShowNewProductForm(prev => !prev)}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded text-sm font-medium"
+            >
+              {showNewProductForm ? 'Cerrar formulario' : 'Añadir producto'}
+            </button>
+          </div>
+
+          {showNewProductForm && (
+            <form onSubmit={addProduct} className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
               <input
                 className="bg-gray-900 rounded px-2 py-1"
                 placeholder="Nombre"
@@ -514,12 +635,12 @@ export default function AdminPanel() {
               />
               <button
                 type="submit"
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded text-sm font-medium"
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded text-sm font-medium"
               >
-                Añadir producto
+                Guardar producto
               </button>
             </form>
-          </div>
+          )}
 
           <ul className="space-y-2">
             {products.map((p) => (
