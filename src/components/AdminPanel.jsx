@@ -33,6 +33,16 @@ export default function AdminPanel() {
   const [saveLocally, setSaveLocally] = useState(true);
   const [localGallery, setLocalGallery] = useState([]);
   const fileInputRef = useRef(null);
+  const [newProduct, setNewProduct] = useState({
+    name: '',
+    description: '',
+    price: '',
+    stock: '',
+    category: '',
+    imageUrl: ''
+  });
+  const [editingProductId, setEditingProductId] = useState(null);
+  const [editingProductData, setEditingProductData] = useState(null);
 
   // --- simple IndexedDB helpers (no dependency) ---
   const DB_NAME = 'mstudio-local';
@@ -325,53 +335,61 @@ export default function AdminPanel() {
   };
 
   // --- Productos CRUD ---
-  const addProduct = async () => {
-    const name = prompt('Nombre del producto');
-    if (!name) return;
-    const description = prompt('Descripción');
-    const price = parseFloat(prompt('Precio (solo número)'));
-    if (isNaN(price)) return alert('Precio inválido');
-    const stock = parseInt(prompt('Stock disponible'));
-    if (isNaN(stock)) return alert('Stock inválido');
-    const category = prompt('Categoría (ej: pomadas, ceras, shampoo)');
-    const imageUrl = prompt('URL de imagen (opcional, puedes subir después)');
-    
+  const addProduct = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const price = parseFloat(newProduct.price);
+    const stock = parseInt(newProduct.stock, 10);
+    if (isNaN(price) || isNaN(stock)) {
+      return alert('Precio o stock inválido');
+    }
     try {
       await addDoc(collection(db, 'products'), {
-        name,
-        description,
+        name: newProduct.name,
+        description: newProduct.description,
         price,
         stock,
-        category: category || 'general',
-        imageUrl: imageUrl || '',
+        category: newProduct.category || 'general',
+        imageUrl: newProduct.imageUrl || '',
         createdAt: serverTimestamp()
       });
+      setNewProduct({ name: '', description: '', price: '', stock: '', category: '', imageUrl: '' });
       alert('Producto agregado correctamente');
     } catch (err) {
       alert('Error agregando producto: ' + err.message);
     }
   };
 
-  const editProduct = async (p) => {
-    const name = prompt('Nombre del producto', p.name);
-    if (!name) return;
-    const description = prompt('Descripción', p.description);
-    const price = parseFloat(prompt('Precio', p.price));
-    if (isNaN(price)) return alert('Precio inválido');
-    const stock = parseInt(prompt('Stock', p.stock));
-    if (isNaN(stock)) return alert('Stock inválido');
-    const category = prompt('Categoría', p.category);
-    const imageUrl = prompt('URL de imagen', p.imageUrl);
-    
+  const startEditProduct = (p) => {
+    setEditingProductId(p.id);
+    setEditingProductData({
+      name: p.name || '',
+      description: p.description || '',
+      price: p.price?.toString() || '',
+      stock: p.stock?.toString() || '',
+      category: p.category || '',
+      imageUrl: p.imageUrl || ''
+    });
+  };
+
+  const saveEditProduct = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!editingProductId || !editingProductData) return;
+    const price = parseFloat(editingProductData.price);
+    const stock = parseInt(editingProductData.stock, 10);
+    if (isNaN(price) || isNaN(stock)) {
+      return alert('Precio o stock inválido');
+    }
     try {
-      await updateDoc(doc(db, 'products', p.id), {
-        name,
-        description,
+      await updateDoc(doc(db, 'products', editingProductId), {
+        name: editingProductData.name,
+        description: editingProductData.description,
         price,
         stock,
-        category: category || 'general',
-        imageUrl: imageUrl || ''
+        category: editingProductData.category || 'general',
+        imageUrl: editingProductData.imageUrl || ''
       });
+      setEditingProductId(null);
+      setEditingProductData(null);
       alert('Producto actualizado');
     } catch (err) {
       alert('Error editando producto: ' + err.message);
@@ -448,28 +466,132 @@ export default function AdminPanel() {
 
         <div className="bg-[#0f0f0f] p-4 rounded mt-6 mb-6">
           <h2 className="font-semibold mb-2">Productos</h2>
+
+          <div className="mb-4">
+            <h3 className="text-sm font-semibold mb-2">Crear nuevo producto</h3>
+            <form onSubmit={addProduct} className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+              <input
+                className="bg-gray-900 rounded px-2 py-1"
+                placeholder="Nombre"
+                value={newProduct.name}
+                onChange={e => setNewProduct({ ...newProduct, name: e.target.value })}
+                required
+              />
+              <input
+                className="bg-gray-900 rounded px-2 py-1 md:col-span-2"
+                placeholder="Descripción"
+                value={newProduct.description}
+                onChange={e => setNewProduct({ ...newProduct, description: e.target.value })}
+              />
+              <input
+                type="number"
+                step="0.01"
+                className="bg-gray-900 rounded px-2 py-1"
+                placeholder="Precio"
+                value={newProduct.price}
+                onChange={e => setNewProduct({ ...newProduct, price: e.target.value })}
+                required
+              />
+              <input
+                type="number"
+                className="bg-gray-900 rounded px-2 py-1"
+                placeholder="Stock"
+                value={newProduct.stock}
+                onChange={e => setNewProduct({ ...newProduct, stock: e.target.value })}
+                required
+              />
+              <input
+                className="bg-gray-900 rounded px-2 py-1"
+                placeholder="Categoría"
+                value={newProduct.category}
+                onChange={e => setNewProduct({ ...newProduct, category: e.target.value })}
+              />
+              <input
+                className="bg-gray-900 rounded px-2 py-1 md:col-span-2"
+                placeholder="URL imagen"
+                value={newProduct.imageUrl}
+                onChange={e => setNewProduct({ ...newProduct, imageUrl: e.target.value })}
+              />
+              <button
+                type="submit"
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded text-sm font-medium"
+              >
+                Añadir producto
+              </button>
+            </form>
+          </div>
+
           <ul className="space-y-2">
             {products.map((p) => (
-              <li key={p.id} className="flex justify-between items-center p-2 bg-gray-900 rounded">
-                <div className="flex-1">
-                  <div className="font-semibold">{p.name}</div>
-                  <div className="text-sm text-gray-400">{p.description}</div>
-                  <div className="text-sm mt-1">
-                    <span className="text-red-500 font-medium">${p.price?.toLocaleString('es-CL')}</span>
-                    <span className="text-gray-500 ml-3">Stock: {p.stock}</span>
-                    {p.category && <span className="text-gray-600 ml-3">· {p.category}</span>}
+              <li key={p.id} className="p-2 bg-gray-900 rounded">
+                {editingProductId === p.id && editingProductData ? (
+                  <form onSubmit={saveEditProduct} className="space-y-2 text-sm">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                      <input
+                        className="bg-gray-800 rounded px-2 py-1"
+                        value={editingProductData.name}
+                        onChange={e => setEditingProductData({ ...editingProductData, name: e.target.value })}
+                      />
+                      <input
+                        className="bg-gray-800 rounded px-2 py-1 md:col-span-2"
+                        value={editingProductData.description}
+                        onChange={e => setEditingProductData({ ...editingProductData, description: e.target.value })}
+                      />
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="bg-gray-800 rounded px-2 py-1"
+                        value={editingProductData.price}
+                        onChange={e => setEditingProductData({ ...editingProductData, price: e.target.value })}
+                      />
+                      <input
+                        type="number"
+                        className="bg-gray-800 rounded px-2 py-1"
+                        value={editingProductData.stock}
+                        onChange={e => setEditingProductData({ ...editingProductData, stock: e.target.value })}
+                      />
+                      <input
+                        className="bg-gray-800 rounded px-2 py-1"
+                        value={editingProductData.category}
+                        onChange={e => setEditingProductData({ ...editingProductData, category: e.target.value })}
+                      />
+                      <input
+                        className="bg-gray-800 rounded px-2 py-1 md:col-span-2"
+                        value={editingProductData.imageUrl}
+                        onChange={e => setEditingProductData({ ...editingProductData, imageUrl: e.target.value })}
+                      />
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                      <button type="submit" className="px-3 py-1 bg-green-600 rounded">Guardar</button>
+                      <button
+                        type="button"
+                        onClick={() => { setEditingProductId(null); setEditingProductData(null); }}
+                        className="px-3 py-1 border rounded"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className="flex justify-between items-center gap-3">
+                    <div className="flex-1">
+                      <div className="font-semibold">{p.name}</div>
+                      <div className="text-sm text-gray-400">{p.description}</div>
+                      <div className="text-sm mt-1">
+                        <span className="text-red-500 font-medium">${p.price?.toLocaleString('es-CL')}</span>
+                        <span className="text-gray-500 ml-3">Stock: {p.stock}</span>
+                        {p.category && <span className="text-gray-600 ml-3">· {p.category}</span>}
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <button onClick={() => startEditProduct(p)} className="px-3 py-1 border rounded text-sm">Editar</button>
+                      <button onClick={() => removeProduct(p)} className="px-3 py-1 bg-red-600 rounded text-sm">Eliminar</button>
+                    </div>
                   </div>
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={() => editProduct(p)} className="px-3 py-1 border rounded">Editar</button>
-                  <button onClick={() => removeProduct(p)} className="px-3 py-1 bg-red-600 rounded">Eliminar</button>
-                </div>
+                )}
               </li>
             ))}
           </ul>
-          <div className="mt-4">
-            <button onClick={addProduct} className="px-4 py-2 bg-red-600 rounded">Añadir producto</button>
-          </div>
         </div>
 
         <div className="bg-[#0f0f0f] p-4 rounded mt-6 mb-6">
