@@ -72,8 +72,8 @@ export default function GalleryPage(){
           />
         </div>
         
-        {/* Grid de imágenes - 1 columna móvil, 2 columnas desktop */}
-        <div className="w-full max-w-[768px] grid grid-cols-1 sm:grid-cols-2 gap-[2px]">
+        {/* Grid de imágenes - 2 columnas móvil, 3 columnas desktop */}
+        <div className="w-full max-w-[768px] grid grid-cols-2 sm:grid-cols-3 gap-[2px]">
           {loading ? (
             <div className="col-span-full text-gray-400 py-8 text-center">Cargando imágenes...</div>
           ) : images.length > 0 ? (

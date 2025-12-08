@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { storage, db } from '../firebase/firebaseConfig';
-import { ref, uploadBytes, getDownloadURL, listAll, deleteObject } from 'firebase/storage';
+import { db } from '../firebase/firebaseConfig';
 import { collection, addDoc, getDocs, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
 
 export default function GalleryAdmin() {
   const [images, setImages] = useState([]);
-  const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [newImageUrl, setNewImageUrl] = useState('');
+  const [newImageDescription, setNewImageDescription] = useState('');
 
   // Cargar imágenes desde Firestore
   const loadImages = async () => {
@@ -26,51 +26,35 @@ export default function GalleryAdmin() {
     loadImages();
   }, []);
 
-  // Subir imagen a Firebase Storage y guardar URL en Firestore
-  const handleUpload = async (e) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
+  // Agregar imagen por URL (como los productos)
+  const handleAddImage = async (e) => {
+    e.preventDefault();
+    if (!newImageUrl.trim()) {
+      alert('Por favor ingresa una URL de imagen');
+      return;
+    }
 
-    setUploading(true);
     try {
-      for (const file of files) {
-        // Subir a Storage
-        const timestamp = Date.now();
-        const filename = `${timestamp}_${file.name}`;
-        const storageRef = ref(storage, `gallery/${filename}`);
-        await uploadBytes(storageRef, file);
-        const imageUrl = await getDownloadURL(storageRef);
-
-        // Guardar referencia en Firestore
-        await addDoc(collection(db, 'gallery'), {
-          imageUrl,
-          filename,
-          description: '',
-          createdAt: new Date()
-        });
-      }
-      alert(`${files.length} imagen(es) subida(s) con éxito`);
+      await addDoc(collection(db, 'gallery'), {
+        imageUrl: newImageUrl.trim(),
+        description: newImageDescription.trim() || '',
+        createdAt: new Date()
+      });
+      alert('Imagen agregada con éxito');
+      setNewImageUrl('');
+      setNewImageDescription('');
       await loadImages();
     } catch (err) {
-      console.error('Error subiendo imágenes:', err);
-      alert('Error subiendo imágenes: ' + err.message);
-    } finally {
-      setUploading(false);
-      e.target.value = ''; // Limpiar input
+      console.error('Error agregando imagen:', err);
+      alert('Error agregando imagen: ' + err.message);
     }
   };
 
   // Eliminar imagen
   const handleDelete = async (image) => {
-    if (!confirm(`¿Eliminar ${image.filename}?`)) return;
+    if (!confirm('¿Eliminar esta imagen de la galería?')) return;
     try {
-      // Eliminar de Storage
-      const storageRef = ref(storage, `gallery/${image.filename}`);
-      await deleteObject(storageRef);
-      
-      // Eliminar de Firestore
       await deleteDoc(doc(db, 'gallery', image.id));
-      
       await loadImages();
       alert('Imagen eliminada');
     } catch (err) {
@@ -83,19 +67,37 @@ export default function GalleryAdmin() {
     <div className="bg-[#0f0f0f] p-4 rounded">
       <h2 className="font-semibold mb-4">Galería de Imágenes</h2>
       
-      {/* Upload */}
-      <div className="mb-4">
-        <input 
-          type="file" 
-          accept="image/*" 
-          multiple 
-          onChange={handleUpload}
-          disabled={uploading}
-          className="text-sm"
-        />
-        {uploading && <p className="text-xs text-yellow-500 mt-2">Subiendo imágenes...</p>}
-        <p className="text-xs text-gray-500 mt-2">Las imágenes se suben a Firebase Storage y aparecerán en la galería pública</p>
-      </div>
+      {/* Formulario para agregar imagen por URL */}
+      <form onSubmit={handleAddImage} className="mb-4 space-y-3">
+        <div>
+          <label className="block text-sm mb-1">URL de la imagen:</label>
+          <input
+            type="url"
+            value={newImageUrl}
+            onChange={(e) => setNewImageUrl(e.target.value)}
+            placeholder="https://ejemplo.com/imagen.jpg"
+            className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-sm"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-sm mb-1">Descripción (opcional):</label>
+          <input
+            type="text"
+            value={newImageDescription}
+            onChange={(e) => setNewImageDescription(e.target.value)}
+            placeholder="Descripción de la imagen"
+            className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-sm"
+          />
+        </div>
+        <button 
+          type="submit"
+          className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded text-sm font-semibold"
+        >
+          Agregar Imagen
+        </button>
+        <p className="text-xs text-gray-500">Las imágenes se agregan por URL (como los productos)</p>
+      </form>
 
       {/* Lista de imágenes */}
       {loading ? (
@@ -108,14 +110,27 @@ export default function GalleryAdmin() {
             <div key={img.id} className="bg-gray-900 rounded overflow-hidden">
               <img 
                 src={img.imageUrl} 
-                alt={img.filename} 
+                alt={img.description || 'Imagen de galería'} 
                 className="w-full h-32 object-cover"
+                onError={(e) => {
+                  e.target.src = 'https://via.placeholder.com/300x200?text=Imagen+no+disponible';
+                }}
               />
               <div className="p-2">
-                <div className="text-xs text-gray-400 truncate">{img.filename}</div>
+                <div className="text-xs text-gray-400 truncate mb-1">
+                  {img.description || 'Sin descripción'}
+                </div>
+                <a 
+                  href={img.imageUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-xs text-blue-400 hover:text-blue-300 truncate block mb-2"
+                >
+                  Ver imagen
+                </a>
                 <button 
                   onClick={() => handleDelete(img)}
-                  className="mt-2 w-full px-2 py-1 bg-red-600 hover:bg-red-700 rounded text-xs"
+                  className="w-full px-2 py-1 bg-red-600 hover:bg-red-700 rounded text-xs"
                 >
                   Eliminar
                 </button>
