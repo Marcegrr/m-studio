@@ -93,75 +93,184 @@ m-studio/
 
 ---
 
-## 📦 Colecciones de Firestore
+## 🧱 Modelo de Datos (Firestore)
 
-### `users`
+| Colección | Campos clave | Descripción | Índices |
+|-----------|--------------|-------------|---------|
+| `users` | `uid`, `email`, `role`, `createdAt` | Persistencia de credenciales y roles. El documento se crea post registro para asignar `admin` o `client`. | Índice simple por `uid` (documento). |
+| `services` | `title`, `duration`, `price`, `createdAt` | Catálogo de servicios mostrados en `/servicios` y administrados por el panel. | Índice compuesto `createdAt desc` para ordenar. |
+| `products` | `name`, `description`, `price`, `stock`, `category`, `imageUrl`, `createdAt` | Catálogo de productos del e-commerce. El stock se actualiza al confirmar pedidos. | Índice compuesto `createdAt desc` (listado) y filtro por `category`. |
+| `orders` | `orderCode`, `customer`, `items`, `totalAmount`, `status`, `pickupDate`, `createdAt`, `picked` | Pedidos generados desde el checkout. Sirve para seguimiento y notificaciones. | Índice `createdAt desc` para panel admin; campo `status` se usa en filtros. |
+| `orders_history` | mismos campos que `orders`, más `originalOrderId`, `archivedAt` | Historial inmutable de pedidos completados/eliminados para auditoría. | Índice `archivedAt desc` para consultas administrativas. |
+| `gallery` | `imageUrl`, `filename`, `description`, `createdAt` | Imágenes almacenadas en Firebase Storage y listadas en `/galeria`. | Índice `createdAt desc` para mostrar recientes. |
+
+Relaciones principales:
+- Los `orders.items` referencian documentos de `products` (por `productId`).
+- Los roles de `users` determinan permisos para CRUD de `services`, `products` y `gallery`.
+- Las URLs de `gallery` provienen de Firebase Storage (`gs://mstudio-e846d.appspot.com/gallery/...`).
+
+---
+
+## 🛡️ Seguridad y Reglas
+
+### Reglas actuales de Firestore
 ```javascript
-{
-  uid: string,
-  email: string,
-  role: 'admin' | 'client' | 'guest',
-  createdAt: timestamp
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.token.email == 'edupalmabozo@gmail.com' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+      );
+    }
+
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if false;
+    }
+
+    match /services/{serviceId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /orders/{orderId} {
+      allow create: if true;
+      allow read, update: if isAdmin();
+      allow delete: if false;
+    }
+
+    match /orders_history/{historyId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /gallery/{imageId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
 }
 ```
 
-### `services`
-```javascript
-{
-  name: string,
-  description: string,
-  imageUrl: string,
-  createdAt: timestamp
-}
-```
+### Controles adicionales
+- Rutas protegidas en React: el panel `/admin` se exige `role === 'admin'`.
+- Estado global de autenticación con `AuthContext` que corta acceso a visitantes.
+- Llaves sensibles (Firebase API, EmailJS) se cargan desde variables de entorno en Netlify.
+- Formularios con validación de datos (checkout requiere nombre, email y teléfono). |
+- Emails enviados mediante EmailJS solo con llave pública; los templates ignoran información sensible.
 
-### `products`
-```javascript
-{
-  name: string,
-  description: string,
-  price: number,
-  stock: number,
-  category: string,
-  imageUrl: string,
-  createdAt: timestamp
-}
-```
+---
 
-### `orders`
-```javascript
-{
-  orderCode: string,           // Ej: MS-ABC123-XYZ45
-  customer: {
-    name: string,
-    email: string,
-    phone: string,
-    address: string,
-    notes: string
-  },
-  items: [{
-    productId: string,
-    name: string,
-    price: number,
-    quantity: number,
-    imageUrl: string
-  }],
-  totalAmount: number,
-  status: 'pending' | 'ready' | 'completed' | 'cancelled',
-  pickupDate: Date,
-  createdAt: timestamp,
-  picked: boolean
-}
-```
+## ⚙️ Configuración del Entorno (Paso a Paso)
 
-### `gallery`
-```javascript
-{
-  imageUrl: string,
-  description: string,
-  createdAt: timestamp
-}
-```
+1. **Clonar el repositorio**
+   ```powershell
+   git clone https://github.com/Marcegrr/m-studio.git
+   cd m-studio
+   ```
+2. **Instalar dependencias**
+   ```powershell
+   npm install
+   ```
+3. **Crear archivo `.env` para Vite**
+   ```ini
+   VITE_FIREBASE_API_KEY=...
+   VITE_FIREBASE_AUTH_DOMAIN=mstudio-e846d.firebaseapp.com
+   VITE_FIREBASE_PROJECT_ID=mstudio-e846d
+   VITE_FIREBASE_STORAGE_BUCKET=mstudio-e846d.appspot.com
+   VITE_FIREBASE_MESSAGING_SENDER_ID=507420190304
+   VITE_FIREBASE_APP_ID=1:507420190304:web:8ab8dde18296a265608505
+   VITE_EMAILJS_PUBLIC_KEY=3OvPjrYqWYFAdpOYH
+   VITE_EMAILJS_SERVICE_ID=service_6sj9iag
+   VITE_EMAILJS_TEMPLATE_CUSTOMER=template_ahdxing
+   VITE_EMAILJS_TEMPLATE_ADMIN=template_j4gxbpd
+   ```
+4. **Firebase**
+   - Crear proyecto o usar `mstudio-e846d`.
+   - Habilitar Authentication (Email/Password) y crear el usuario admin.
+   - Generar la base de datos Firestore (modo producción, región `nam5`).
+   - Configurar Firebase Storage (región multirregión, reglas por defecto + enforcement de auth).
+5. **EmailJS**
+   - Crear servicio con ID `service_6sj9iag`.
+   - Replica los templates `template_ahdxing` (cliente) y `template_j4gxbpd` (admin).
+6. **Netlify**
+   - Conectar repositorio y setear variables de entorno anteriores.
+   - Build command `npm run build`, publish `dist`.
+7. **Ejecutar entorno local**
+   ```powershell
+   npm run dev
+   ```
+   Acceso en `http://localhost:5173`.
+8. **Servidor opcional de uploads locales** (solo desarrollo)
+   ```powershell
+   npm run upload-server
+   ```
+
+---
+
+## 🧩 Arquitectura y Flujos Clave
+
+- **Capas**
+  - UI con React y Tailwind (componentes en `src/components`).
+  - Estado global mediante `AuthContext` y `CartContext`.
+  - Persistencia en Firestore + Storage.
+  - Notificaciones con EmailJS.
+- **Flujo de Checkout**
+  1. Usuario agrega productos al carrito (`CartContext`).
+  2. Checkout valida datos y genera código `MS-{timestamp}-{random}`.
+  3. Se crea documento `orders`, se descuenta stock con transacción.
+  4. EmailJS envía correos al cliente y admin.
+  5. Pantalla de confirmación muestra código y fecha estimada.
+- **Panel Admin**
+  - Formularios retráctiles para crear servicios/productos.
+  - Edición inline con validaciones básicas.
+  - Sección de pedidos con cambio de estado (`pending` → `ready` → `completed`).
+  - Gestión de galería (subida a Storage + registro en `gallery`).
+
+---
+
+## ✅ Plan de Pruebas Manuales
+
+| Caso | Descripción | Resultado Esperado | Estado | Observaciones |
+|------|-------------|--------------------|--------|---------------|
+| Navegación básica | Recorrer Home → Servicios → Productos → Galería → Contacto | Todas las páginas cargan sin errores, diseño consistente | Pendiente | |
+| Añadir al carrito | Agregar producto desde `/productos` | Contador y modal muestran item, total actualizado | Pendiente | |
+| Checkout válido | Completar formulario y confirmar | Pedido en Firestore, stock decrementa, emails enviados | Pendiente | |
+| Checkout inválido | Omitir campos obligatorios | Se muestran mensajes de validación y no se crea pedido | Pendiente | |
+| CRUD servicios | Crear, editar y eliminar servicio desde `/admin` | Firestore se actualiza y UI refleja cambios | Pendiente | |
+| CRUD productos | Crear, editar y eliminar producto desde `/admin` | Firestore se actualiza y UI refleja cambios | Pendiente | |
+| Cambiar estado pedido | Marcar pedido como listo/entregado | Campo `status` cambia y se registra `completedAt` | Pendiente | |
+| Galería | Subir imagen y verificar en `/galeria` | Imagen en Storage, documento en `gallery`, vista actualizada | Pendiente | |
+| Seguridad rutas | Intentar abrir `/admin` sin rol admin | Redirección o bloqueo | Pendiente | |
+| EmailJS | Revisar bandeja admin y cliente tras pedido | Se reciben dos correos con datos correctos | Pendiente | |
+
+- Estado se marcará como `OK`, `Con observación` o `Falla` tras ejecutar.
+- Registrar fecha/hora de ejecución para cada caso.
+
+---
+
+## 📊 Resultados y Validación
+
+- Al ejecutar el plan se documentará cada resultado (obtenido vs esperado).
+- En caso de fallas, se registrará la causa y la corrección aplicada.
+- Confirmar manualmente la existencia del pedido en Firestore y los correos enviados.
+
+---
+
+## 💡 Recomendaciones y Mejora Continua
+
+- Integrar pasarela de pago (Mercado Pago / Transbank) para completar el flujo de e-commerce.
+- Habilitar notificaciones push (Firebase Cloud Messaging) para avisar estados de pedidos.
+- Implementar panel analítico (ventas por periodo, productos más vendidos) con gráficas.
+- Extender seguridad con verificación de email obligatorio y logging de auditoría.
+- Convertir la app en PWA para uso offline y acceso rápido en móviles.
 
 ---
 
@@ -303,4 +412,4 @@ git push                    # Push a GitHub → Netlify despliega automáticamen
 
 ---
 
-**Última actualización:** Diciembre 3, 2025
+**Última actualización:** Diciembre 9, 2025

@@ -435,6 +435,15 @@ export default function AdminPanel() {
     }
   };
 
+  const archiveOrder = async (order) => {
+    const { id, ...data } = order;
+    await addDoc(collection(db, 'orders_history'), {
+      ...data,
+      originalOrderId: id,
+      archivedAt: serverTimestamp()
+    });
+  };
+
   const removeProduct = async (p) => {
     if (!confirm(`¿Eliminar ${p.name}?`)) return;
     try {
@@ -823,6 +832,7 @@ export default function AdminPanel() {
                         onClick={async () => {
                           if (!confirm('¿Eliminar este pedido? Esta acción no se puede deshacer.')) return;
                           try {
+                            await archiveOrder(order);
                             await deleteDoc(doc(db, 'orders', order.id));
                           } catch (e) {
                             alert('Error: ' + e.message);
