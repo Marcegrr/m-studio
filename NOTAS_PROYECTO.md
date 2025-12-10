@@ -49,7 +49,7 @@
 - Ejecutar `npm install` una sola vez para reconstruir `node_modules`.
 - Confirmar que el archivo `.env` esté presente con las credenciales de Firebase y EmailJS (usar las mismas del proyecto).
 - Lanzar la demo con `npm run dev` y abrir `http://localhost:5173/` en el navegador.
-- Si el checkout muestra "Modo demostración activo", mencionar que el pedido quedó guardado en `localStorage` para la presentación.
+- Si Firestore rechaza la orden, la app entra en modo demostración (el pedido se confirma en pantalla y se guarda en `localStorage` bajo `mstudio_demo_orders`).
 - Al terminar, cerrar la terminal con `Ctrl + C` para detener Vite.
 
 ---

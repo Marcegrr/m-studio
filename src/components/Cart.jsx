@@ -251,7 +251,6 @@ export default function Cart({ onClose }) {
         clearCart();
         setLoading(false);
         setError('');
-        alert('Modo demostración activo: el pedido se guardó localmente para la presentación.');
         return;
       }
       setError('Hubo un error al procesar tu pedido. Por favor intenta nuevamente.');
