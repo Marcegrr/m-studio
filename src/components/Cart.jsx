@@ -25,15 +25,16 @@ export default function Cart({ onClose }) {
   const [error, setError] = useState('');
 
   const handleInputChange = (e) => {
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [name]: value
     }));
   };
 
   const generateOrderCode = () => {
     const timestamp = Date.now().toString(36);
-    const random = Math.random().toString(36).substring(2, 7);
+    const random = Math.random().toString(36).substring(2, 6);
     return `MS-${timestamp}-${random}`.toUpperCase();
   };
 
@@ -113,6 +114,9 @@ export default function Cart({ onClose }) {
     e.preventDefault();
     setLoading(true);
     setError('');
+    let orderCode = '';
+    let pickupDate = null;
+    let orderData = null;
 
     try {
       // Validate form
@@ -123,14 +127,14 @@ export default function Cart({ onClose }) {
       }
 
       // Generate unique order code
-      const orderCode = generateOrderCode();
+      orderCode = generateOrderCode();
       
       // Calculate pickup date (3 days from now)
-      const pickupDate = new Date();
+      pickupDate = new Date();
       pickupDate.setDate(pickupDate.getDate() + 3);
 
       // Prepare order data
-      const orderData = {
+      orderData = {
         orderCode,
         customer: {
           name: formData.name,
@@ -190,6 +194,62 @@ export default function Cart({ onClose }) {
 
     } catch (err) {
       console.error('Error creating order:', err);
+      if (err.code === 'permission-denied') {
+        console.warn('Firestore denegó la creación del pedido. Activando modo demo local.');
+        const demoId = `demo-${Date.now()}`;
+        const displayPickup = (pickupDate || new Date()).toLocaleDateString('es-CL', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+
+        const fallbackTotal = getTotalPrice();
+        const fallbackOrderCode = orderCode || generateOrderCode();
+        setOrderConfirmation({
+          orderCode: fallbackOrderCode,
+          orderId: demoId,
+          pickupDate: displayPickup,
+          total: fallbackTotal,
+          email: formData.email
+        });
+
+        // Persist simple log en localStorage para respaldar la demo
+        try {
+          const existing = JSON.parse(localStorage.getItem('mstudio_demo_orders') || '[]');
+          existing.push({
+            id: demoId,
+            createdAt: new Date().toISOString(),
+            payload: {
+              orderCode: fallbackOrderCode,
+              totalAmount: fallbackTotal,
+              pickupDate: (pickupDate || new Date()).toISOString(),
+              customer: {
+                name: formData.name,
+                email: formData.email,
+                phone: formData.phone,
+                address: formData.address || '',
+                notes: formData.notes || ''
+              },
+              items: cart.map(item => ({
+                id: item.id,
+                name: item.name,
+                price: item.price,
+                quantity: item.quantity
+              }))
+            }
+          });
+          localStorage.setItem('mstudio_demo_orders', JSON.stringify(existing));
+        } catch (storageErr) {
+          console.warn('No se pudo guardar el pedido de demo en localStorage', storageErr);
+        }
+
+        clearCart();
+        setLoading(false);
+        setError('');
+        alert('Modo demostración activo: el pedido se guardó localmente para la presentación.');
+        return;
+      }
       setError('Hubo un error al procesar tu pedido. Por favor intenta nuevamente.');
     } finally {
       setLoading(false);

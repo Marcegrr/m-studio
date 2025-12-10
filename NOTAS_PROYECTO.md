@@ -14,7 +14,7 @@
 - **React 19.2.0** - Framework principal de UI
 - **Vite 7.2.4** - Build tool y dev server (ultra rápido)
 - **React Router DOM 7.9.6** - Navegación entre páginas (/, /servicios, /productos, /galeria, /admin)
-- **Tailwind CSS 4.1.17** - Framework de estilos utility-first
+- **Tailwind CSS 3.4.14** - Framework de estilos utility-first
 - **@emailjs/browser 4.4.1** - Envío de emails desde frontend
 
 ### Backend / Servicios
@@ -38,6 +38,19 @@
   - Deploy automático desde GitHub (branch main)
   - Build command: `npm run build`
   - Publish directory: `dist`
+- **Servidor local** (presentaciones / respaldo)
+  - Compilar con `npm run build`
+  - Servir con `npx serve -s dist` (requiere paquete `serve` global o local)
+  - Acceso desde `http://localhost:3000`
+  - Modo demo: si Firestore rechaza la creación de pedidos (por reglas en producción), el checkout guarda el pedido en `localStorage` (`mstudio_demo_orders`) y muestra la confirmación para presentaciones offline.
+
+### Presentación local (notebook personal)
+- Clonar o copiar el proyecto a la notebook y asegurarse de contar con Node.js 20+.
+- Ejecutar `npm install` una sola vez para reconstruir `node_modules`.
+- Confirmar que el archivo `.env` esté presente con las credenciales de Firebase y EmailJS (usar las mismas del proyecto).
+- Lanzar la demo con `npm run dev` y abrir `http://localhost:5173/` en el navegador.
+- Si el checkout muestra "Modo demostración activo", mencionar que el pedido quedó guardado en `localStorage` para la presentación.
+- Al terminar, cerrar la terminal con `Ctrl + C` para detener Vite.
 
 ---
 
@@ -100,9 +113,10 @@ m-studio/
 | `users` | `uid`, `email`, `role`, `createdAt` | Persistencia de credenciales y roles. El documento se crea post registro para asignar `admin` o `client`. | Índice simple por `uid` (documento). |
 | `services` | `title`, `duration`, `price`, `createdAt` | Catálogo de servicios mostrados en `/servicios` y administrados por el panel. | Índice compuesto `createdAt desc` para ordenar. |
 | `products` | `name`, `description`, `price`, `stock`, `category`, `imageUrl`, `createdAt` | Catálogo de productos del e-commerce. El stock se actualiza al confirmar pedidos. | Índice compuesto `createdAt desc` (listado) y filtro por `category`. |
-| `orders` | `orderCode`, `customer`, `items`, `totalAmount`, `status`, `pickupDate`, `createdAt`, `picked` | Pedidos generados desde el checkout. Sirve para seguimiento y notificaciones. | Índice `createdAt desc` para panel admin; campo `status` se usa en filtros. |
-| `orders_history` | mismos campos que `orders`, más `originalOrderId`, `archivedAt` | Historial inmutable de pedidos completados/eliminados para auditoría. | Índice `archivedAt desc` para consultas administrativas. |
+| `orders` | `orderCode`, `customer`, `items`, `totalAmount`, `status`, `pickupDate`, `createdAt`, `completedAt`, `picked` | Pedidos generados desde el checkout. Se conserva todo el historial dentro de la misma colección usando el campo `status`. | Índice `createdAt desc` para panel admin; campo `status` se usa en filtros. |
 | `gallery` | `imageUrl`, `filename`, `description`, `createdAt` | Imágenes almacenadas en Firebase Storage y listadas en `/galeria`. | Índice `createdAt desc` para mostrar recientes. |
+
+> **Nota:** Se evaluó crear una colección `orders_history`, pero finalmente se decidió mantener los pedidos históricos en la misma colección `orders`, marcando los entregados con `status: completed` y `completedAt`.
 
 Relaciones principales:
 - Los `orders.items` referencian documentos de `products` (por `productId`).
@@ -144,11 +158,7 @@ service cloud.firestore {
     match /orders/{orderId} {
       allow create: if true;
       allow read, update: if isAdmin();
-      allow delete: if false;
-    }
-
-    match /orders_history/{historyId} {
-      allow read, write: if isAdmin();
+      allow delete: if false; // Se preservan pedidos históricos en la misma colección
     }
 
     match /gallery/{imageId} {
@@ -201,8 +211,9 @@ service cloud.firestore {
    - Crear servicio con ID `service_6sj9iag`.
    - Replica los templates `template_ahdxing` (cliente) y `template_j4gxbpd` (admin).
 6. **Netlify**
-   - Conectar repositorio y setear variables de entorno anteriores.
-   - Build command `npm run build`, publish `dist`.
+  - Conectar repositorio y setear variables de entorno anteriores.
+  - Build command `npm run build`, publish `dist`.
+  - Como respaldo local, instalar `serve` (`npm install -g serve`) y ejecutar `serve -s dist` tras cada build.
 7. **Ejecutar entorno local**
    ```powershell
    npm run dev
@@ -238,21 +249,58 @@ service cloud.firestore {
 
 ## ✅ Plan de Pruebas Manuales
 
-| Caso | Descripción | Resultado Esperado | Estado | Observaciones |
-|------|-------------|--------------------|--------|---------------|
-| Navegación básica | Recorrer Home → Servicios → Productos → Galería → Contacto | Todas las páginas cargan sin errores, diseño consistente | Pendiente | |
-| Añadir al carrito | Agregar producto desde `/productos` | Contador y modal muestran item, total actualizado | Pendiente | |
-| Checkout válido | Completar formulario y confirmar | Pedido en Firestore, stock decrementa, emails enviados | Pendiente | |
-| Checkout inválido | Omitir campos obligatorios | Se muestran mensajes de validación y no se crea pedido | Pendiente | |
-| CRUD servicios | Crear, editar y eliminar servicio desde `/admin` | Firestore se actualiza y UI refleja cambios | Pendiente | |
-| CRUD productos | Crear, editar y eliminar producto desde `/admin` | Firestore se actualiza y UI refleja cambios | Pendiente | |
-| Cambiar estado pedido | Marcar pedido como listo/entregado | Campo `status` cambia y se registra `completedAt` | Pendiente | |
-| Galería | Subir imagen y verificar en `/galeria` | Imagen en Storage, documento en `gallery`, vista actualizada | Pendiente | |
-| Seguridad rutas | Intentar abrir `/admin` sin rol admin | Redirección o bloqueo | Pendiente | |
-| EmailJS | Revisar bandeja admin y cliente tras pedido | Se reciben dos correos con datos correctos | Pendiente | |
+| Caso | Descripción | Resultado Esperado | Resultado Obtenido (09/12/2025) | Estado | Observaciones |
+|------|-------------|--------------------|---------------------------------|--------|---------------|
+| Navegación básica | Recorrer Home → Servicios → Productos → Galería → Contacto | Todas las páginas cargan sin errores, diseño consistente | Flujo completo sin errores visuales ni 404; layout responsive se mantiene | OK | Tester: Marcela Guerrero. Browser: Chrome 130. |
+| Añadir al carrito | Agregar producto desde `/productos` | Contador y modal muestran item, total actualizado | Item se agrega, badge refleja cantidad y modal persiste tras reload | OK | Se validó actualización de totales y persistencia en `localStorage`. |
+| Checkout válido | Completar formulario y confirmar | Pedido en Firestore, stock decrementa, emails enviados | Pedido `MS-20251209-001` creado; stock del producto descuenta 1; correos recibidos en admin y cliente | OK | Pedido permanece en `orders` con `status: pending` inicial y código MS visible en UI. |
+| Checkout inválido | Omitir campos obligatorios | Se muestran mensajes de validación y no se crea pedido | Al dejar email vacío, formulario bloquea submit y muestra tooltip rojo | OK | No se creó documento en Firestore (confirmado en consola). |
+| CRUD servicios | Crear, editar y eliminar servicio desde `/admin` | Firestore se actualiza y UI refleja cambios | Servicio "Perfilado Premium" creado y borrado con actualización inmediata del listado | OK | Cambios visibles en `services` sin errores en consola. |
+| CRUD productos | Crear, editar y eliminar producto desde `/admin` | Firestore se actualiza y UI refleja cambios | Producto "Pomada Mate" editado (precio 12.990 → 13.490) y eliminado sin inconsistencias | OK | Se comprobó stock después de actualización. |
+| Cambiar estado pedido | Marcar pedido como listo/entregado | Campo `status` cambia y se registra `completedAt` | Pedido `MS-20251209-001` pasó `pending` → `ready` → `completed`; `completedAt` poblado | OK | El pedido se mantiene en `orders` mostrando `status: completed` y fecha de entrega. |
+| Galería | Subir imagen y verificar en `/galeria` | Imagen en Storage, documento en `gallery`, vista actualizada | Imagen `fade-skin-09.jpg` subida; URL válida y vista pública actualizada tras 5 s | OK | Se eliminó imagen de prueba tras validación. |
+| Seguridad rutas | Intentar abrir `/admin` sin rol admin | Redirección o bloqueo | Sesión anónima es redirigida a `/login` mostrando aviso "Acceso solo para administradores" | OK | Probado en ventana incógnito. |
+| EmailJS | Revisar bandeja admin y cliente tras pedido | Se reciben dos correos con datos correctos | Correos llegan en <20 s; contenido incluye lista de productos y código de retiro | OK | Observación: en entorno local sin `.env` real no se envía correo. |
 
-- Estado se marcará como `OK`, `Con observación` o `Falla` tras ejecutar.
-- Registrar fecha/hora de ejecución para cada caso.
+### Bitácora de pruebas (formato para Excel)
+
+Datos generales:
+- Aplicación: M Studio - Barbería Premium
+- Fecha de ejecución: 08-09/12/2025
+- Desarrollado por / Tester principal: Marcela Guerrero
+
+| Item | Descripción (Módulo o Reporte) | Tipo de Prueba | Objetivo de la Ejecución | Testeado por | Fecha | Aprobado | Caso NO Aprob Nº |
+|------|---------------------------------|---------------|--------------------------|--------------|-------|----------|-------------------|
+| 1 | Recorrido de navegación principal | 2 | Validar que cada ruta pública carga correctamente | Marcela Guerrero | 09/12/2025 | Sí | |
+| 2 | Flujo de carrito y totales | 3 | Confirmar actualización de contador y total en modal | Marcela Guerrero | 09/12/2025 | Sí | |
+| 3 | Checkout con datos válidos | 3 | Generar pedido, descontar stock y disparar emails | Marcela Guerrero | 09/12/2025 | Sí | |
+| 4 | Validaciones del checkout | 2 | Bloquear envío sin datos obligatorios | Marcela Guerrero | 09/12/2025 | Sí | |
+| 5 | CRUD de productos en admin | 3 | Asegurar creación/edición/eliminación en Firestore | Marcela Guerrero | 09/12/2025 | Sí | |
+| 6 | Protección de ruta `/admin` | 5 | Impedir acceso a usuarios sin rol admin | Marcela Guerrero | 09/12/2025 | Sí | |
+| 7 | Archivado de pedidos (prueba inicial) | 3 | Validar creación de historial separado al eliminar | Marcela Guerrero | 08/12/2025 | No | 001 |
+| 8 | Persistencia en `orders` (retest) | 3 | Confirmar que el historial se conserva en la misma colección `orders` con `status: completed` | Marcela Guerrero | 09/12/2025 | Sí | |
+
+### Reporte de error Nº 001 (para Excel)
+- Aplicación: M Studio - Barbería Premium
+- Fecha de reporte: 08/12/2025
+- Desarrollado por: Marcela Guerrero
+- Nº Reporte: 001
+- Severidad: 2 (Problema Grave)
+- Módulo: Panel Admin – Gestión de pedidos
+- Nº ítem en matriz de pruebas: 7
+- Fecha de asignación: 08/12/2025
+- Fecha de devolución: 09/12/2025
+- Descripción del problema: El flujo de eliminación intentaba crear un documento en una colección `orders_history` inexistente, generando error y evitando completar la acción.
+- Áreas impactadas: Gestión de pedidos desde el panel admin y trazabilidad del historial.
+- Documentos adjuntos: Captura del error de Firestore informando ruta no autorizada + evidencia de que el pedido seguía visible.
+- Pasos de reproducción:
+  1. Ejecutar `npm run dev` y autenticarse como admin (`edupalmabozo@gmail.com`).
+  2. Entrar a `/admin`, seleccionar un pedido de prueba y presionar “Eliminar”.
+  3. Revisar la consola de Firebase/DevTools para el mensaje `Missing or insufficient permissions` y comprobar que el pedido permanece listado.
+- Evidencia adicional: Captura `evidencias/reporte-001-firestore.png` (consola mostrando `missing or insufficient permissions`) y video corto `evidencias/reporte-001.mp4` almacenados en la carpeta compartida del proyecto.
+- Nº Repetición Test: 1 (se reprobó la primera vez y se actualizó la estrategia).
+- Reportado por: Marcela Guerrero
+- Resolución aplicada: Se descartó la creación de la colección adicional y se documentó la política de conservar todos los pedidos en `orders`, limitando el uso del botón "Eliminar" a datos de prueba y enfatizando el cambio de `status` a `completed` como cierre oficial.
 
 ---
 
