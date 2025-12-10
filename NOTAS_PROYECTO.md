@@ -407,7 +407,7 @@ git push                    # Push a GitHub → Netlify despliega automáticamen
 
 ## 📞 Contactos del Negocio
 - **Dirección:** Sandro Botticelli 7889, Las Condes, Región Metropolitana, Chile
-- **Email:** edupalmabozo@gmail.com
+- **Email:** marcegrr1@hotmail.com
 - **WhatsApp:** +56 9 3668 1862
 - **Horario:** Lunes a Sábado, 10:00 - 19:00
 

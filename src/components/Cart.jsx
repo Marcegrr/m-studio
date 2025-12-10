@@ -9,7 +9,7 @@ const EMAILJS_PUBLIC_KEY = '3OvPjrYqWYFAdpOYH';
 const EMAILJS_SERVICE_ID = 'service_6sj9iag';
 const EMAILJS_TEMPLATE_CUSTOMER = 'template_ahdxing';
 const EMAILJS_TEMPLATE_ADMIN = 'template_j4gxbpd';
-const ADMIN_NOTIFICATION_EMAIL = 'edupalmabozo@gmail.com';
+const ADMIN_NOTIFICATION_EMAIL = 'marcegrr1@hotmail.com';
 
 export default function Cart({ onClose }) {
   const { cart, addToCart, removeFromCart, deleteFromCart, getTotalPrice, clearCart } = useCart();
