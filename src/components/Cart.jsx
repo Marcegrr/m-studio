@@ -9,6 +9,7 @@ const EMAILJS_PUBLIC_KEY = '3OvPjrYqWYFAdpOYH';
 const EMAILJS_SERVICE_ID = 'service_6sj9iag';
 const EMAILJS_TEMPLATE_CUSTOMER = 'template_ahdxing';
 const EMAILJS_TEMPLATE_ADMIN = 'template_j4gxbpd';
+const ADMIN_NOTIFICATION_EMAIL = 'edupalmabozo@gmail.com';
 
 export default function Cart({ onClose }) {
   const { cart, addToCart, removeFromCart, deleteFromCart, getTotalPrice, clearCart } = useCart();
@@ -67,6 +68,8 @@ export default function Cart({ onClose }) {
 
       // Email parameters for customer
       const customerParams = {
+        to_email: orderData.customer.email,
+        reply_to: ADMIN_NOTIFICATION_EMAIL,
         customerName: orderData.customer.name,
         customerEmail: orderData.customer.email,
         orderCode: orderData.orderCode,
@@ -78,6 +81,7 @@ export default function Cart({ onClose }) {
 
       // Email parameters for admin
       const adminParams = {
+        to_email: ADMIN_NOTIFICATION_EMAIL,
         orderCode: orderData.orderCode,
         customerName: orderData.customer.name,
         customerEmail: orderData.customer.email,
